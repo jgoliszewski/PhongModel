@@ -3,6 +3,8 @@ import numpy as np
 import math
 from colorsys import hls_to_rgb
 from itertools import product
+import pygame_widgets
+from pygame_widgets.dropdown import Dropdown
 
 #todo: większe okno z zachowaniem rozdzielczości
 SCREEN_WIDTH = 400
@@ -23,9 +25,9 @@ STEP = 50
 Ia = 1      # natężenie światła w otoczeniu obiektu
 Ip = .6      # natężenie światła punktowego
 
-Ka = 0.1   # współczynnik odbicia światła otoczenia
-Ks = 0.4     # współczynnik odbicia światła kierunkowego 
-Kd = 0.8   # współczysnnik odbicia światła rozproszonego 
+Ka = 0.4   # współczynnik odbicia światła otoczenia
+Ks = 0.9     # współczynnik odbicia światła kierunkowego 
+Kd = 0.9   # współczysnnik odbicia światła rozproszonego 
 
 n = 27      # współczynnik gładkości powierzchni
 
@@ -87,27 +89,53 @@ def draw():
 
             screen.set_at((x, SCREEN_HEIGHT - y), color)
 
+def check_for_light_in_sphere(x,y,z):
+    r = math.sqrt((x-SPHERE_CENTER[0])**2 + (y-SPHERE_CENTER[1])**2 + (z-SPHERE_CENTER[2])**2)
+    #print(r)
+    return r > 100
+
 def move(direction):
-    # todo: dodać ograniczenia ruchu
     match direction:
         case "up":
-            LIGHT_SOURCE_POSITION[1] += STEP
+            if check_for_light_in_sphere(LIGHT_SOURCE_POSITION[0],LIGHT_SOURCE_POSITION[1]+STEP,LIGHT_SOURCE_POSITION[2]):
+                LIGHT_SOURCE_POSITION[1] += STEP
         case "down":
-            LIGHT_SOURCE_POSITION[1] -= STEP
+            if check_for_light_in_sphere(LIGHT_SOURCE_POSITION[0],LIGHT_SOURCE_POSITION[1]-STEP,LIGHT_SOURCE_POSITION[2]):
+                LIGHT_SOURCE_POSITION[1] -= STEP
         case "left":
-            LIGHT_SOURCE_POSITION[0] -= STEP
+            if check_for_light_in_sphere(LIGHT_SOURCE_POSITION[0]-STEP,LIGHT_SOURCE_POSITION[1],LIGHT_SOURCE_POSITION[2]):
+                LIGHT_SOURCE_POSITION[0] -= STEP
         case "right":
-            LIGHT_SOURCE_POSITION[0] += STEP
+            if check_for_light_in_sphere(LIGHT_SOURCE_POSITION[0]+STEP,LIGHT_SOURCE_POSITION[1],LIGHT_SOURCE_POSITION[2]):
+                LIGHT_SOURCE_POSITION[0] += STEP
         case "forward":
-            LIGHT_SOURCE_POSITION[2] += STEP
+            if check_for_light_in_sphere(LIGHT_SOURCE_POSITION[0],LIGHT_SOURCE_POSITION[1],LIGHT_SOURCE_POSITION[2]+STEP):
+                LIGHT_SOURCE_POSITION[2] += STEP
         case "backward":
-            LIGHT_SOURCE_POSITION[2] -= STEP
+            if check_for_light_in_sphere(LIGHT_SOURCE_POSITION[0],LIGHT_SOURCE_POSITION[1],LIGHT_SOURCE_POSITION[2]-STEP):
+                LIGHT_SOURCE_POSITION[2] -= STEP
 
 
 
 pg.init()
 screen = pg.display.set_mode(SCREEN_SIZE)
 pg.display.set_caption("Phong Model")
+
+default = (0.4, 0.9, 0.9) # Ka, Kd, Ks
+chalk = (0.4, 0.3, 0.01)
+wood = (0.8, 0.8, 0.3)
+
+current = default
+
+dropdown = Dropdown(
+    screen, 10, 10, 100, 20, name='Select material',
+    choices=[
+        'Metal',
+        'Chalk',
+        'Wood'
+    ],
+    values=[default, chalk, wood]
+)
 
 run = True
 draw()
@@ -138,10 +166,23 @@ while run:
         move("forward")
         draw()
         
+    material = dropdown.getSelected()
+
+    if current != material and material != None:
+        current = material
+        Ka = current[0]
+        Kd = current[1]
+        Ks = current[2]
+        screen.fill((0,0,0))
+        draw()
+        
     pg.display.flip()
 
     
-
-    for event in pg.event.get():
+    events = pg.event.get()
+    for event in events:
         if event.type == pg.QUIT:
+            pg.quit()
             run = False
+            quit()
+    pygame_widgets.update(events)
